@@ -1107,7 +1107,7 @@ $M$ 将不再具有清晰的比例解释。
 
 ---
 
-![image-20260728153130397](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260728153132.png)
+![image-20260728153130397](static/img/56e9205596b3.png)
 
 # 八、为什么主要干预中间层
 

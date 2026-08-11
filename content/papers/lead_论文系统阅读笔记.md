@@ -141,9 +141,9 @@ a_{1:n}=(a_1,a_2,\ldots,a_n).
 
 需要注意，论文主要证明的是相关性，而不是“转换词直接导致幻觉”。转换词更适合被理解为模型进入不确定推理阶段的语言表征。
 
-> ![image-20260804173408063](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173409.png)
+> ![image-20260804173408063](static/img/7000fc13ff3f.png)
 >
-> ![image-20260804173444129](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173445.png)
+> ![image-20260804173444129](static/img/0eee66b34f25.png)
 >
 > 
 >
@@ -296,7 +296,7 @@ one-hot 的特点是只有一个位置为 1，其余位置全为 0。它只表�
 
 > 对高熵状态的正确处理方式不是删除、抑制或忽略，而是暂时保留其中的候选语义，避免在证据不足时过早选择单一路径。
 
-> ![image-20260804173515696](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173516.png)
+> ![image-20260804173515696](static/img/b9264a10de2e.png)
 > 图 3(a) 用于说明高熵 token 的信息重要性；图 3(b) 用于说明早期高熵节点的路径影响。图 3(c)(d)可在后文模式切换与视觉锚点部分分别引用。
 
 ---
@@ -387,7 +387,7 @@ p_{t+1}
 
 > 标准模型只把 \(p_t\) 当作选择 \(r_t\) 的工具；LEAD 同时把 \(p_t\) 用于估计不确定性，并在高熵阶段直接构造下一步语义表示。
 
-> ![image-20260804173732132](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173733.png)
+> ![image-20260804173732132](static/img/e6a2c18c41e5.png)
 > 该图最适合作为方法总览图，放在本节之后。阅读时应重点标注：token distribution、latent decoding、discrete decoding、\(H_t\) 与 \(\widehat H\) 的比较、weighted embedding。
 
 ---
@@ -848,7 +848,7 @@ W\text{ 太大}
 
 实验中 128 最优，但这只是当前模型和任务下的经验结果，不应视为通用常数。
 
-> ![image-20260804173815893](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173817.png)
+> ![image-20260804173815893](static/img/a3b6e23175c2.png)
 > 图 5 放在动态阈值之后；图 6 放在持续窗口之后。这样能够使每个实验直接回答对应公式是否必要。
 
 ---
@@ -1005,9 +1005,9 @@ Vision-R1 也在 \(\lambda=0.4\) 时达到整体最好结果。
 
 图 7(a) 进一步显示，LEAD 对任务相关视觉区域分配了更高注意力；图 7(b) 则展示了潜在模式下分布更分散、离散模式下分布更接近 one-hot。
 
-> ![image-20260804173841488](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173842.png)
+> ![image-20260804173841488](static/img/f27a425b20cf.png)
 >
-> ![image-20260804173902313](http[本地路径]/gitee.com/hamawari/saveimage/raw/master/images/20260804173903.png)
+> ![image-20260804173902313](static/img/7600a144b454.png)
 >
 > 表 1用于说明视觉引导强度的平衡；图 7用于说明视觉注意力与 token 分布形态发生了怎样的变化。
 
