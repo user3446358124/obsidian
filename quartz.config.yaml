@@ -7,7 +7,7 @@ configuration:
   analytics:
     provider: plausible
   locale: zh-CN
-  baseUrl: placeholder
+  baseUrl: user3446358124.github.io/obsidian
   ignorePatterns:
     - private
     - templates
