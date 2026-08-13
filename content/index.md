@@ -12,6 +12,7 @@ tags:
 
 - **[[papers/|Papers]]** — 论文阅读笔记：每篇论文解决的问题、核心方法、关键结论
 - **[[reproductions/|Reproductions]]** — 代码复现记录：真实实验、复现结果与经验
+- **[[presentations/|Presentations]]** — 论文汇报：HTML 演示文稿
 - **[[projects/|Projects]]** — 个人研究项目：动机、方法与进展
 - **[[tags/|Tags]]** — 按方法 / 主题聚合（如 `#methods/contrastive-decoding`）
 
