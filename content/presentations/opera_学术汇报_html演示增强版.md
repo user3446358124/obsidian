@@ -7,6 +7,7 @@ description: "OPERA 学术汇报（HTML 演示增强版） 本文件是 HTML 演
 html_url: "presentations/opera_学术汇报_html演示增强版.html"
 published: 2026-08-13
 updated: 2026-08-13
+modified: 2026-08-13
 ---
 
 # OPERA 学术汇报（HTML 演示增强版）

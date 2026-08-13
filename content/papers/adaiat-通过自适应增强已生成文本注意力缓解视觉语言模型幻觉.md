@@ -15,6 +15,7 @@ authors:
 year: "2026"
 published: 2026-08-11
 updated: 2026-08-13
+modified: 2026-08-13
 ---
 
 # AdaIAT：通过自适应增强已生成文本注意力缓解视觉语言模型幻觉

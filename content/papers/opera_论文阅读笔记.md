@@ -17,6 +17,7 @@ authors:
 year: "2023"
 published: 2026-08-13
 updated: 2026-08-13
+modified: 2026-08-13
 ---
 
 # OPERA：基于 Over-Trust Penalty 与 Retrospection-Allocation 的多模态大模型幻觉缓解
