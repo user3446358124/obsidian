@@ -23,6 +23,4 @@ tags:
 ## 说明
 
 - 内容持续更新中；
-- 本站由 Obsidian Vault 经清洗后自动生成；
-- Papers 是阅读笔记，Reproductions 是实际复现和实验，Projects 是个人研究项目；
-- 任何私人信息（Zotero 条目、本地路径、草稿）都不会出现在本站。
+- Papers 是阅读笔记，Reproductions 是实际复现和实验，Projects 是个人研究项目。
