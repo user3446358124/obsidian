@@ -15,8 +15,8 @@ authors:
   - "Deng, Cheng"
 year: "2026"
 published: 2026-08-11
-updated: 2026-08-14
-modified: 2026-08-14
+updated: 2026-08-13
+modified: 2026-08-13
 ---
 
 # PADE：基于正向注意力动态的视觉幻觉缓解方法
