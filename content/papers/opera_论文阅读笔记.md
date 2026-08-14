@@ -16,8 +16,8 @@ authors:
   - "Yu, Nenghai"
 year: "2023"
 published: 2026-08-13
-updated: 2026-08-13
-modified: 2026-08-13
+updated: 2026-08-14
+modified: 2026-08-14
 ---
 
 # OPERA：基于 Over-Trust Penalty 与 Retrospection-Allocation 的多模态大模型幻觉缓解
@@ -26,6 +26,8 @@ modified: 2026-08-13
 > 核心定位：**不增加训练、不引入额外数据或外部知识，仅在推理/解码阶段缓解 MLLM 幻觉。**
 
 ---
+
+![image-20260814074840425](static/img/960e599b0dc5.png)
 
 ## 0. 全文方法论主线
 
