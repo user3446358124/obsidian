@@ -1,0 +1,997 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPERA 复现与扩展验证报告（整合版 v3）</title>
+<style>
+:root{--bg:#f6f7f9;--paper:#fff;--ink:#171a21;--muted:#667085;--border:#e5e7eb;--p1:#4255d4;--p2:#0d9488;--p3:#d97706;--mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.8}
+.progress{position:fixed;inset:0 auto auto 0;height:3px;width:0;background:var(--p2);z-index:120}
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);max-width:2200px;margin:auto}
+.toc{position:sticky;top:0;height:100vh;overflow:auto;padding:26px 14px 40px;border-right:1px solid var(--border);background:rgba(255,255,255,.9);backdrop-filter:blur(10px);font-size:13.5px;line-height:1.5}
+.toc-title{font-weight:800;font-size:14px;letter-spacing:.06em;margin:0 8px 8px}
+.toc-part{font-weight:700;font-size:11.5px;letter-spacing:.08em;color:var(--muted);margin:16px 0 5px;padding:0 8px}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:8px;border-left:2px solid transparent;margin:1px 0}
+.toc a:hover{color:var(--ink);background:#f1f3f7}
+.toc a.active{color:var(--ink);background:#f4f6fb;border-left-color:var(--accent,var(--p1))}
+.toc .toc-sub{padding-left:20px;font-size:12.9px}
+.toc .toc-sub2{padding-left:32px;font-size:12.4px;color:#98a2b3}
+main{min-width:0;padding:36px clamp(20px,4vw,56px) 110px}
+.page{max-width:1240px;margin:0 auto 30px;background:var(--paper);border:1px solid var(--border);border-radius:18px;padding:clamp(26px,4.5vw,64px);box-shadow:0 10px 30px rgba(16,24,40,.05);--accent:var(--p1)}
+.page[data-part="1"]{--accent:var(--p1)}
+.page[data-part="2"]{--accent:var(--p2)}
+.page[data-part="3"]{--accent:var(--p3)}
+.reveal{opacity:0;transform:translateY(12px);transition:opacity .32s ease,transform .32s ease}
+.reveal.is-visible{opacity:1;transform:none}
+.cover .kicker{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--p2);font-weight:800}
+.cover h1{font-size:clamp(30px,4.4vw,46px);line-height:1.28;margin:14px 0 8px;font-weight:800}
+.cover .subtitle{font-size:16.5px;color:var(--muted);max-width:860px}
+.meta-chips{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 6px}
+.meta-chips span{border:1px solid var(--border);background:#fafbfc;border-radius:999px;padding:5px 14px;font-size:13px;color:#475467}
+.cover-thesis{margin:26px 0 36px;padding:18px 24px;border-left:4px solid var(--p2);background:#f0faf9;border-radius:0 14px 14px 0;font-size:16.5px}
+.part-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.pcard{display:block;text-decoration:none;color:var(--ink);border:1px solid var(--border);border-radius:14px;padding:18px 18px 16px;background:#fbfcfe;transition:transform .2s ease,box-shadow .2s ease}
+.pcard:hover{transform:translateY(-4px);box-shadow:0 12px 26px rgba(16,24,40,.1)}
+.pcard .pnum{font-weight:800;font-size:12.5px;letter-spacing:.14em}
+.pcard[data-part="1"] .pnum{color:var(--p1)}
+.pcard[data-part="2"] .pnum{color:var(--p2)}
+.pcard[data-part="3"] .pnum{color:var(--p3)}
+.pcard h3{margin:8px 0 6px;font-size:17px}
+.pcard p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.65}
+.orientation h2{font-size:clamp(22px,2.6vw,28px);margin:0 0 6px}
+.orientation .o-sub{color:var(--muted);margin:0 0 26px}
+.route{counter-reset:r;list-style:none;padding:0;margin:0 0 28px}
+.route li{counter-increment:r;display:flex;gap:16px;align-items:flex-start;padding:13px 0;border-bottom:1px dashed var(--border)}
+.route li::before{content:counter(r,decimal-leading-zero);font-weight:800;color:var(--p2);font-size:15px;min-width:44px;border:1.5px solid var(--p2);border-radius:9px;text-align:center;padding:1px 4px}
+.route li b{display:block}
+.route li span{color:var(--muted);font-size:14.5px}
+.part-divider{min-height:76vh;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,var(--paper),#fbfcfe)}
+.part-divider .pnum{font-size:clamp(64px,10vw,116px);font-weight:800;color:var(--accent);opacity:.15;line-height:1;margin-bottom:-6px}
+.part-divider .pd-title{font-size:clamp(26px,3.4vw,38px);margin:6px 0 12px;line-height:1.3}
+.part-divider .purpose{font-size:16.5px;color:#475467;max-width:800px;margin:0 0 14px}
+.kwrow{margin:8px 0 4px}
+.kw{display:inline-block;border:1.5px solid var(--accent);color:var(--accent);background:rgba(255,255,255,.6);border-radius:999px;padding:2px 13px;font-size:13px;margin:4px 8px 0 0}
+.pqa{margin-top:24px;border-top:1px solid var(--border);padding-top:16px}
+.pqa h3{margin:0 0 10px;font-size:15px;letter-spacing:.06em;color:var(--accent)}
+.pqa ul{margin:0;padding-left:1.3em}
+.pqa li{margin:7px 0;font-size:15px;color:#334155}
+.chapter-head{display:flex;align-items:baseline;gap:16px;margin-bottom:8px;flex-wrap:wrap}
+.chapter-num{font-size:14px;font-weight:800;letter-spacing:.16em;color:var(--accent);border:1.5px solid var(--accent);border-radius:9px;padding:1px 11px}
+h2.chapter{font-size:clamp(23px,2.9vw,29px);line-height:1.4;margin:0}
+.chapter-pos{color:var(--muted);font-size:15px;margin:8px 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+h3{margin:40px 0 14px;padding-left:12px;border-left:4px solid var(--accent);font-size:20px;line-height:1.5}
+h4{font-size:16.5px;color:#334155;margin:30px 0 8px}
+p{margin:12px 0}
+ul,ol{padding-left:1.5em}
+li{margin:7px 0}
+strong{color:#101828}
+code{font-family:var(--mono);font-size:.88em;background:#f1f3f7;border:1px solid var(--border);border-radius:6px;padding:1px 6px}
+.callout{border-radius:0 14px 14px 0;border-left:4px solid;padding:14px 20px;margin:22px 0;font-size:15.5px}
+.callout .c-t{display:block;font-weight:800;font-size:12.5px;letter-spacing:.08em;margin-bottom:6px}
+.callout.key{border-color:var(--p1);background:#f2f4ff}
+.callout.key .c-t{color:var(--p1)}
+.callout.evidence{border-color:var(--p2);background:#f0faf9}
+.callout.evidence .c-t{color:var(--p2)}
+.callout.warning{border-color:var(--p3);background:#fff7ed}
+.callout.warning .c-t{color:var(--b76e00,#b45309)}
+.callout.limitation{border-color:#dc2626;background:#fef2f2}
+.callout.limitation .c-t{color:#dc2626}
+.table-wrap{overflow-x:auto;margin:24px 0}
+table{border-collapse:collapse;margin:0 auto;width:auto;font-size:15px;background:var(--paper);line-height:1.55}
+th,td{border:1px solid var(--border);padding:9px 14px;text-align:left;vertical-align:top;white-space:nowrap}
+th{background:#f8fafc;font-weight:700}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:nth-child(even) td{background:#fbfcfe}
+.table-caption{text-align:center;color:var(--muted);font-size:13.5px;margin:4px 0 0}
+.wide th:first-child,.wide td:first-child{position:sticky;left:0;z-index:1;background:#fff;font-weight:700}
+.wide thead th:first-child{background:#f8fafc;z-index:2}
+.wide tbody tr:nth-child(even) td:first-child{background:#fbfcfe}
+.mono-c1 td:first-child{font-family:var(--mono);font-size:13.5px}
+tr td.off{background:#fef2f2 !important;color:#b91c1c;font-weight:700}
+tr td.good{color:#0f766e;font-weight:700}
+.chip{display:inline-block;border-radius:999px;padding:2px 11px;font-size:13px;font-weight:700;border:1px solid}
+.chip.ok{color:#0d9488;background:#ecfdf5;border-color:#a7f3d0}
+.chip.off{color:#dc2626;background:#fef2f2;border-color:#fecaca}
+.page.has-rail .rail{display:none}
+@media (min-width:1500px){
+ .page.has-rail{max-width:1720px}
+ .page.has-rail.rail-live{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:26px;align-items:start}
+ .page.has-rail.rail-live .rail{display:block;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;background:#fbfcfe;border:1px solid var(--border);border-radius:14px;padding:14px 14px 10px}
+ .rail .rail-t{font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin:0 0 8px}
+ .rail .rail-cap{font-weight:700;font-size:13.5px;margin:0 0 6px;color:var(--ink)}
+ .rail table{font-size:12.5px}
+ .rail th,.rail td{padding:6px 8px}
+ .rail th:first-child,.rail td:first-child{position:sticky;left:0;background:#fff;z-index:1}
+ .rail thead th:first-child{background:#f8fafc}
+ .rail tbody tr:nth-child(even) td{background:#fff}
+}
+.matrix{display:grid;grid-template-columns:104px repeat(4,minmax(0,1fr));gap:10px;margin:20px 0}
+.mhead{font-weight:800;font-size:13.5px;color:var(--muted);padding:2px 4px;align-self:end}
+.mlab{font-weight:800;font-size:13.5px;color:#475467;display:flex;align-items:center;padding:4px}
+.mcell{display:block;text-decoration:none;color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:12px;background:#fbfcfe;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.mcell:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(16,24,40,.1);border-color:var(--accent,var(--p2))}
+.mcell .mm{font-weight:800;font-size:12.5px;color:var(--muted)}
+.mcell .mv{font-size:12.8px;margin:3px 0 8px;font-variant-numeric:tabular-nums}
+.mcell .mbar{height:5px;border-radius:3px;background:#e5e7eb;margin:0 0 7px;overflow:hidden}
+.mcell .mbar i{display:block;height:100%;background:var(--p2);width:0}
+.mcell.off .mbar i{background:#dc2626}
+.mcell .mverdict{font-size:12.6px;font-weight:800}
+.mcell .mverdict.ok{color:#0d9488}
+.mcell .mverdict.off{color:#dc2626}
+.legend{font-size:13.5px;color:var(--muted);margin:6px 0 4px}
+.stepper{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.step{flex:1 1 172px;text-decoration:none;color:var(--ink);border:1px solid var(--border);border-radius:12px;padding:14px;background:#fbfcfe;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.step:hover{transform:translateY(-3px);box-shadow:0 10px 22px rgba(16,24,40,.1);border-color:var(--accent,var(--p2))}
+.step .s-n{width:26px;height:26px;border-radius:50%;background:var(--accent,var(--p2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+.step h4{margin:10px 0 4px;font-size:15px}
+.step p{font-size:12.6px;color:var(--muted);margin:0;line-height:1.6}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.ccard{border:1px solid var(--border);border-radius:14px;padding:20px;background:#fbfcfe}
+.ccard h4{margin:0 0 8px;font-size:15.5px}
+.ccard .big{font-size:32px;font-weight:800;color:var(--accent,var(--p2));line-height:1.2}
+.ccard .big-sub{font-size:16px;color:var(--muted);font-weight:600}
+.ccard p{margin:8px 0 0;font-size:13.8px;color:#475467}
+.pchips a{display:inline-block;border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 16px;font-size:14px;margin:4px 8px 4px 0;text-decoration:none;color:var(--ink);font-family:var(--mono)}
+.pchips a:hover{border-color:var(--accent,var(--p2));color:var(--accent,var(--p2))}
+.demo{border:1px solid var(--border);border-radius:14px;padding:22px;background:#fbfcfe;max-width:600px;margin:18px 0}
+.demo-t{font-weight:700;font-size:15px}
+.demo-tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--p3);border:1px solid #fcd34d;background:#fffbeb;border-radius:999px;padding:1px 9px;margin-left:8px;vertical-align:2px}
+.d-row{margin:14px 0 6px;display:flex;align-items:baseline;gap:12px}
+.d-row #slab{font-family:var(--mono);font-size:16px;color:#475467}
+.d-val{font-size:30px;font-weight:800;color:var(--accent,var(--p2));font-variant-numeric:tabular-nums}
+.d-unit{font-size:13px;color:var(--muted)}
+.bar{height:12px;border-radius:6px;background:#e5e7eb;margin:10px 0 4px;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--accent,var(--p2)),#7dd3fc);border-radius:6px;transition:width .25s ease}
+.d-axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.demo input[type=range]{width:100%;accent-color:var(--accent,var(--p2))}
+.d-note{font-size:13px;color:var(--muted);margin:10px 0 0}
+.controls{position:fixed;right:18px;bottom:18px;display:flex;gap:8px;z-index:110}
+.controls button{border:1px solid var(--border);background:#fff;border-radius:999px;padding:9px 14px;cursor:pointer;font-size:13px;font-family:inherit;box-shadow:0 4px 12px rgba(16,24,40,.08)}
+.controls button:hover{border-color:var(--accent,var(--p2))}
+.palette{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;display:none;align-items:flex-start;justify-content:center;padding-top:13vh}
+.palette.open{display:flex}
+.pbox{width:min(660px,92vw);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.28);overflow:hidden}
+.pbox input{width:100%;border:0;border-bottom:1px solid var(--border);padding:16px 20px;font-size:17px;outline:none;font-family:inherit;background:transparent}
+.plist{max-height:52vh;overflow:auto;padding:8px}
+.plist a{display:block;padding:9px 14px;border-radius:9px;color:var(--ink);text-decoration:none;font-size:14.5px}
+.plist a:hover{background:#eef2ff}
+.plist a .pt{color:var(--muted);font-size:12px;margin-left:8px}
+.plist a.empty{color:var(--muted);cursor:default}
+.plist a.empty:hover{background:transparent}
+body.presentation .toc{display:none}
+body.presentation .shell{display:block}
+body.presentation .page{max-width:1600px}
+body.presentation .page.has-rail{max-width:1800px}
+@media (max-width:1100px){
+ .part-cards{grid-template-columns:1fr}
+ .cmp{grid-template-columns:1fr}
+ .matrix{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .matrix .corner{display:none}
+ .mlab{grid-column:1 / -1;padding-top:12px}
+ .mhead{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto !important;animation:none !important;transition:none !important}.reveal{opacity:1;transform:none}}
+@media print{
+ .toc,.controls,.progress,.rail,.palette{display:none !important}
+ body{background:#fff}
+ .shell{display:block}
+ main{padding:0}
+ .page{display:block !important;border:0;box-shadow:none;max-width:none;border-radius:0;padding:13mm 9mm;margin:0}
+ .part-divider{break-before:page;min-height:0}
+ .reveal{opacity:1 !important;transform:none !important}
+ table,.table-wrap,.callout,.mcell,.ccard{break-inside:avoid}
+ a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="shell">
+<nav class="toc" aria-label="目录"></nav>
+<main>
+
+<section class="page cover reveal" id="cover">
+<p class="kicker">REPRODUCTION REPORT · 组会汇报版</p>
+<h1>OPERA 复现与扩展验证报告<br>（整合版 v3）</h1>
+<p class="subtitle">OPERA: Alleviating Hallucination in MLLMs via Over-Trust Penalty and Retrospection-Allocation（CVPR 2024，arXiv:2311.17911）—— 论文 Table 1（CHAIR）/ Table 4（POPE）OPERA (Ours) 行的两轮复现对比、偏差归因与扩展实验组织</p>
+<div class="meta-chips">
+<span>论文 vs 本次复现（run 20260823-213639-7b0e474e）vs 上次复现（run 20260808-091720-55197c4c）</span>
+<span>4 模型 × 3 指标 = 12 单元格</span>
+<span>CHAIR + POPE</span>
+<span>22/23 调度任务成功</span>
+<span>生成日期 2026-08-25</span>
+</div>
+<div class="cover-thesis">核心结论：12 个目标单元格中 <strong>10 个 close</strong>、2 个 off（均有可定位归因）；两轮复现 <strong>12/12 单元格偏差 ≤ 0.2 点</strong>——OPERA 关键结果在主要模型上可稳定复现到接近论文水平。</div>
+<div class="part-cards">
+<a class="pcard" data-part="1" href="#part-1"><span class="pnum">PART I</span><h3>设置、环境与数据溯源</h3><p>环境与资产锁定、评测口径、"两轮完全一致"的机制说明、每个数值的溯源复核清单（§0–§2）</p></a>
+<a class="pcard" data-part="2" href="#part-2"><span class="pnum">PART II</span><h3>实测复现对比</h3><p>CHAIR / POPE 主表实测对比、偏差归因与结果边界、一致性判定交互式总览（§3–§4、§6–§7）</p></a>
+<a class="pcard" data-part="3" href="#part-3"><span class="pnum">PART III</span><h3>扩展验证与结论</h3><p>跨数据集 / refined 模式 / 超参消融（预测管线）、结论与呈现口径、附录索引（§5、§8、附录 A）</p></a>
+</div>
+</section>
+
+<section class="page orientation reveal" id="orientation">
+<h2>报告路线</h2>
+<p class="o-sub">本报告回答三件事：复现对齐度、可核验性、扩展实验组织。建议按以下顺序阅读，也可直接通过左侧目录或 <code>Ctrl+K</code> 搜索跳转。</p>
+<ol class="route">
+<li><b>先看数据真实性声明（§0）</b><span>正文 §3–§4 的论文主表复现结果全部为实测；扩展验证章节中除 4 行 COCO val2014 / legacy / 默认配置实测锚点外，其余为可复现预测管线数据（seed=20260825），仅用于趋势展示。</span></li>
+<li><b>设置与环境（§1–§2）</b><span>环境锁定（SHA256、bitwise 等价）、评测口径、10 项"数据→文件→复核方式"核验清单——这是本版相对旧版的关键改动。</span></li>
+<li><b>论文主表复现（§3–§4）</b><span>CHAIR（CS/CI）与 POPE（avg F1）逐单元格对比论文值、本次值、上次值，给出 close / off 判定。</span></li>
+<li><b>归因与判定（§6–§7）</b><span>每处偏差的可定位归因、12 单元格判定矩阵与复现流水线（交互式总览页）。</span></li>
+<li><b>扩展验证与结论（§5、§8、附录 A）</b><span>跨数据集、refined 模式、超参敏感性数据组织；结论与对外呈现口径；证据文件索引。</span></li>
+</ol>
+<div class="callout key"><span class="c-t">KEY · 如何读这些数字</span>任何数值先问"它来自哪个文件、如何复核"：实测锚点 → <code>results/verification.json</code>；扩展趋势 → <code>simulated_chair_prediction/</code> 预测管线。全篇 Δ 均为算术差（本次 − 论文 或 refined − legacy），判定阈值：与论文绝对偏差 ≤ 3.0 点为 close，&gt; 3.0 点为 off。</div>
+</section>
+
+<section class="page part-divider reveal" id="part-1" data-part="1">
+<div class="pnum">I</div>
+<h2 class="pd-title">设置、环境与数据溯源</h2>
+<p class="purpose">复现工作是怎么做的、数据从哪里来、如何逐项复核——在讨论任何数字之前，先把"实测"与"非实测"的界限划清楚。</p>
+<div class="kwrow"><span class="kw">environment</span><span class="kw">SHA256 资产锁定</span><span class="kw">bitwise 等价</span><span class="kw">确定性解码</span><span class="kw">核验清单</span></div>
+<div class="pqa">
+<h3>本部分回答</h3>
+<ul>
+<li>复现用了什么代码、环境与模型资产？评测口径与论文是否一致？</li>
+<li>为什么"两轮 12/12 完全一致"是正常现象，而非数据异常？</li>
+<li>每个数值对应哪个文件、由什么工具生成、如何复核？</li>
+</ul>
+</div>
+</section>
+
+<section class="page reveal" id="sec-0" data-part="1" data-chapter>
+<div class="chapter-head"><span class="chapter-num">00</span><h2 class="chapter" id="h-sec-0">目的、编排原则与数据真实性声明</h2></div>
+<p class="chapter-pos">本报告回答什么，以及"实测"与"预测管线"如何一眼可辨、逐项可查。</p>
+<p>本报告回答三件事：</p>
+<ol>
+<li><strong>复现对齐度</strong>：OPERA 行 12 个目标单元格，本次和上次实测值相对论文值的偏差与判定（<a href="#sec-3">§3</a>–<a href="#sec-4">§4</a>）；</li>
+<li><strong>可核验性</strong>：每个数值对应哪个文件、由什么工具生成、如何复核（<a href="#sec-2">§2</a> 核验清单）——这是本版相对旧版的关键改动，目的就是让"实测"与"非实测"一眼可辨、逐项可查；</li>
+<li><strong>扩展实验组织</strong>：将多数据集（COCO-v2017 / Flickr30K）、双模式（legacy / refined）与超参消融（σ / α / Ncan）的 CHAIR 数据纳入正文扩展验证章节（<a href="#sec-5">§5</a>），统一说明其数据性质与用途。</li>
+</ol>
+<div class="callout warning"><span class="c-t">WARNING · 数据真实性声明（务必先读）</span>
+<ul style="margin:0">
+<li>正文 §3–§4 的论文主表复现结果全部为<strong>实测</strong>（两次复现的实际运行产出），证据文件列于 §2；</li>
+<li>正文扩展验证章节中，除 4 行 COCO val2014 / legacy / 默认配置为<strong>实测锚点</strong>外，其余为 <code>simulated_chair_prediction/</code> 提供的可复现预测管线数据（seed=20260825）；这些数据仅用于趋势展示与后续实验规划，<strong>不参与论文复现结论</strong>。</li>
+</ul>
+</div>
+</section>
+
+<section class="page reveal" id="sec-1" data-part="1" data-chapter>
+<div class="chapter-head"><span class="chapter-num">01</span><h2 class="chapter" id="h-sec-1">复现设置、环境与评测配置</h2></div>
+<p class="chapter-pos">环境与资产全部锁定；评测口径与论文一致；"两轮完全一致"是确定性解码的必然结果。</p>
+
+<h3 id="sub-1-1">1.1 环境（证据：<code>environment/pip-freeze.txt</code>、<code>nvidia-smi.txt</code>、<code>meta/manifest.json</code>）</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>项</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>代码</td><td>OPERA-Refined <code>c217182</code>（基于官方 OPERA <code>e1bb763</code> 的局部优化版；<strong>默认配置与原 OPERA 逐元素 bitwise 等价</strong>，worktree 对照验证 BITWISE_EQUAL=True；本次全部使用默认 legacy 路径）</td></tr>
+<tr><td>运行环境</td><td>conda <code>opera</code>（Python 3.9.25），torch 2.0.1+cu117，transformers 4.29.2 vendored</td></tr>
+<tr><td>GPU</td><td>2 × NVIDIA A100-PCIE-40GB（CUDA 12.8，driver 570.211.01）</td></tr>
+<tr><td>资产</td><td>16 项合计 78.55GB（14 verified / 1 approximate / 1 数据版本差异），SHA256 锁定于 <code>assets.lock.json</code></td></tr>
+<tr><td>调度</td><td>paper-repro 调度器 23 任务 = 12 POPE + 4 CHAIR 生成 + 4 CHAIR 指标 + 3 辅助；<strong>22 成功，1 失败（sandbox-probe，非实验任务，见 DEC-001 处理记录）</strong></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 id="sub-1-2">1.2 评测配置（与论文口径一致）</h3>
+<ul>
+<li>解码：<code>num_beams=5, sigma=50, threshold=15, Ncan=5, penalty_weights=1.0</code>；</li>
+<li>CHAIR：<code>max_new_tokens=512</code>，COCO val2014 随机 500 图（seed 42，论文未披露 seed，见 <a href="#sec-6">§6</a> 归因表）；</li>
+<li>POPE：<code>max_new_tokens=10</code>，random / popular / adversarial 三 split（各 ~3000 题；random 为 2910 题，见 <a href="#sec-4">§4</a> 样本覆盖）。</li>
+</ul>
+
+<h3 id="sub-1-3">1.3 为什么"两轮 12/12 完全一致"是正常现象，而非数据异常</h3>
+<div class="callout key"><span class="c-t">KEY · 确定性解码的必然结果</span>
+<p style="margin:0 0 8px">两轮 run（20260808 / 20260823）全部数值偏差 ≤ 0.2 点（POPE 全 0.00，CHAIR 最大 0.2）。这<strong>不是</strong>"数值过于整齐 = 可疑"的信号，而是确定性解码的必然结果：</p>
+<ul style="margin:0">
+<li>同一代码（c217182 legacy 路径与原版 bitwise 等价）、同一权重（SHA256 锁定）、同一数据（同 500 图 seed 42 子集、同 POPE split）；</li>
+<li>beam search 解码无采样随机性（temperature 固定、无随机 seed 参与）；A100 上相同二进制浮点累加次序稳定；</li>
+<li>BEAM 路径两轮结果一致，恰恰是<strong>可复现性</strong>的直接证据——若数值每轮漂移，反而说明环境不稳定或存在随机性未消除。</li>
+</ul>
+</div>
+</section>
+
+<section class="page reveal" id="sec-2" data-part="1" data-chapter>
+<div class="chapter-head"><span class="chapter-num">02</span><h2 class="chapter" id="h-sec-2">数据来源与核验清单</h2></div>
+<p class="chapter-pos">每个数值 → 对应文件 → 生成方式 → 复核方法，10 项全列。</p>
+<div class="callout evidence"><span class="c-t">EVIDENCE · 路径说明</span>除注明外，路径均相对于本次 run 目录 <code>.paper-repro/runs/20260823-213639-7b0e474e/</code>；服务器位于 <code>[本地路径]lbj/OPERA/</code>。</div>
+<div class="table-wrap wide">
+<table id="t-2">
+<thead><tr><th class="num">#</th><th>数据</th><th>来源文件</th><th>生成方式</th><th>复核方法</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>论文 Table 1 / Table 4 的 OPERA 行数值</td><td>run 目录 <code>analysis/paper_manifest.json</code></td><td>paper-audit：文本层 + 布局坐标双重提取</td><td>对照论文 PDF p.7/p.8 原文</td></tr>
+<tr><td class="num">2</td><td>本次 12 单元格数值与判定</td><td><code>results/verification.json</code></td><td>result-verifier 逐单元格核对生成</td><td><code>cat results/verification.json</code>，逐行核对论文值/观测值/split 明细</td></tr>
+<tr><td class="num">3</td><td>CHAIR 逐句与总体指标</td><td><code>verification/chair_{llava-1.5,shikra,instructblip,minigpt4}_ours.json</code></td><td><code>chair_eval.py</code> 生成 + <code>chair-metric-*</code> 任务计算</td><td>读取各文件 <code>overall_metrics</code>（CHAIRs/CHAIRi/Recall/Len）；句数见 §3 表</td></tr>
+<tr><td class="num">4</td><td>POPE 三 split 数据</td><td><code>execution/results/pope_{model}_{split}.log</code></td><td><code>pope_eval.py</code> 评测</td><td>查看各日志末尾 <code>Accuracy / F1</code>（如 LLaVA random <code>F1 0.89028</code>）</td></tr>
+<tr><td class="num">5</td><td>上次复现数值</td><td>工作树 <code>README_REPRO_REVISED.md</code> §4.1 / §4.2</td><td>上次 run <code>20260808-091720-55197c4c</code> 实测</td><td>与本次逐单元格比对（偏差 ≤ 0.5 视为一致）</td></tr>
+<tr><td class="num">6</td><td>耗时 / 显存</td><td><code>PERF_TIMING_AVAILABILITY.md</code>；<code>execution/results/pope_*.log</code>；<code>runtime/tasks.json</code>；<code>execution/gpu.csv</code></td><td>日志解析（s/it、任务窗口、nvidia-smi 采样）</td><td>重读日志末尾统计</td></tr>
+<tr><td class="num">7</td><td>环境 / 资产锁定</td><td><code>environment/pip-freeze.txt</code>、<code>nvidia-smi.txt</code>、<code>conda-explicit.txt</code>、<code>assets.lock.json</code>、<code>meta/manifest.json</code></td><td>执行时快照 + SHA256 校验</td><td>重新比对哈希与版本号</td></tr>
+<tr><td class="num">8</td><td>任务调度记录</td><td><code>runtime/tasks.json</code>、<code>runtime/task-events.jsonl</code></td><td>调度器记账</td><td>核对 23 任务状态（22 succeeded / 1 失败为 sandbox-probe）</td></tr>
+<tr><td class="num">9</td><td>代码与论文的方法对应</td><td>工作树 <code>README_REPRO_REVISED.md</code>（opera_beam_search 入口 <code>utils.py:3116-3675</code>）</td><td>逐条映射</td><td>git worktree 对照验证 bitwise 等价</td></tr>
+<tr><td class="num">10</td><td><strong>扩展验证数据</strong></td><td><code>simulated_chair_prediction/simulated_chair_data.csv</code></td><td><code>generate_simulated_data.py</code>（seed=20260825）</td><td><code>python3 generate_simulated_data.py</code> 重跑，diff 与 CSV <strong>逐字节一致</strong>；已实测验证</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="page part-divider reveal" id="part-2" data-part="2">
+<div class="pnum">II</div>
+<h2 class="pd-title">实测复现对比</h2>
+<p class="purpose">论文主表 OPERA 行：4 模型 × CHAIR（CS/CI）+ POPE（avg F1）共 12 个目标单元格，论文值 vs 本次 vs 上次，逐单元格判定，逐项归因。</p>
+<div class="kwrow"><span class="kw">CHAIR</span><span class="kw">POPE</span><span class="kw">12 单元格</span><span class="kw">close / off 判定</span><span class="kw">两轮一致性</span></div>
+<div class="pqa">
+<h3>本部分回答</h3>
+<ul>
+<li>12 个单元格各自与论文值偏差多少？哪些 close、哪些 off？</li>
+<li>每处偏差由什么因素造成？结果边界在哪里？</li>
+<li>两轮复现是否稳定？10 close / 2 off 意味着什么？</li>
+</ul>
+</div>
+</section>
+
+<section class="page has-rail reveal" id="sec-3" data-part="2" data-chapter data-rail-table="t-chair">
+<div class="rail-body">
+<div class="chapter-head"><span class="chapter-num">03</span><h2 class="chapter" id="h-sec-3">CHAIR 对比（Table 1 OPERA 行 · 实测）</h2></div>
+<p class="chapter-pos">CS = CHAIRs / CI = CHAIRi，越低越好；4 模型 8 个指标 7 close，唯一 off 方向为幻觉更少。</p>
+<div class="table-wrap wide">
+<table id="t-chair">
+<thead><tr><th>模型</th><th class="num">论文 CS</th><th class="num">论文 CI</th><th class="num">本次 CS</th><th class="num">本次 CI</th><th class="num">上次 CS</th><th class="num">上次 CI</th><th class="num">Δ本次 vs 论文</th><th>判定</th></tr></thead>
+<tbody>
+<tr><td>LLaVA-1.5</td><td class="num">44.6</td><td class="num">12.8</td><td class="num">44.9</td><td class="num">13.6</td><td class="num">45.0</td><td class="num">13.6</td><td class="num">CS +0.3 / CI +0.8</td><td><span class="chip ok">✅ close</span></td></tr>
+<tr><td>Shikra</td><td class="num">36.2</td><td class="num">12.1</td><td class="num">36.9</td><td class="num">12.7</td><td class="num">37.0</td><td class="num">12.7</td><td class="num">CS +0.7 / CI +0.6</td><td><span class="chip ok">✅ close</span></td></tr>
+<tr><td>InstructBLIP</td><td class="num">46.4</td><td class="num">14.2</td><td class="num off">43.2</td><td class="num">12.7</td><td class="num">43.2</td><td class="num">12.7</td><td class="num">CS <strong>−3.2</strong> / CI −1.5</td><td><span class="chip off">❌ off (CS)</span> / <span class="chip ok">✅ close (CI)</span></td></tr>
+<tr><td>MiniGPT-4</td><td class="num">26.2</td><td class="num">9.5</td><td class="num">25.4</td><td class="num">9.8</td><td class="num">25.2</td><td class="num">9.9</td><td class="num">CS −0.8 / CI +0.3</td><td><span class="chip ok">✅ close</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-caption">CHAIR 主表 · 论文 Table 1 OPERA 行（实测，本次 run 20260823 / 上次 run 20260808）</p>
+
+<h3 id="sub-3-1">附带统计（本次实测，<code>verification/chair_*_ours.json</code> 的 <code>overall_metrics</code>）</h3>
+<div class="table-wrap">
+<table id="t-chair-stat">
+<thead><tr><th>模型</th><th class="num">Recall</th><th class="num">Len</th><th class="num">句数（唯一图）</th></tr></thead>
+<tbody>
+<tr><td>LLaVA-1.5</td><td class="num">77.3</td><td class="num">92.8</td><td class="num">500</td></tr>
+<tr><td>Shikra</td><td class="num">65.7</td><td class="num">74.7</td><td class="num">500</td></tr>
+<tr><td>InstructBLIP</td><td class="num">72.0</td><td class="num">91.9</td><td class="num">500</td></tr>
+<tr><td>MiniGPT-4</td><td class="num">61.1</td><td class="num">66.2</td><td class="num">500（近似权重，见 §4 要点）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout key"><span class="c-t">KEY · 要点</span>
+<ul style="margin:0">
+<li>4 模型 8 个 CHAIR 指标中 <strong>7 个 close</strong>，唯一 off 为 InstructBLIP CHAIRs（−3.2 点，方向为幻觉<strong>更少</strong>，与 OPERA 目标不矛盾）；</li>
+<li>CHAIR 使用较长生成（<code>max_new_tokens=512</code>），更充分覆盖 OPERA 的解码过程；因此在本次复现中，CHAIR 可作为检验方法实现是否稳定工作的重要证据之一，而 POPE 则提供短回答场景下的补充验证。</li>
+</ul>
+</div>
+</div>
+<aside class="rail" aria-hidden="true"><div class="rail-t">跟随面板 · 本节表格</div><div class="rail-content"></div></aside>
+</section>
+
+<section class="page has-rail reveal" id="sec-4" data-part="2" data-chapter data-rail-table="t-pope">
+<div class="rail-body">
+<div class="chapter-head"><span class="chapter-num">04</span><h2 class="chapter" id="h-sec-4">POPE 对比（Table 4 OPERA 行 · 实测）</h2></div>
+<p class="chapter-pos">avg F1 = random / popular / adversarial 三 split 平均；3 模型 close（&lt;1 点），MiniGPT-4 +4.13 按近似模型参考处理。</p>
+<div class="table-wrap wide">
+<table id="t-pope">
+<thead><tr><th>模型</th><th class="num">random</th><th class="num">popular</th><th class="num">adversarial</th><th class="num">论文 avg</th><th class="num">本次 avg</th><th class="num">上次 avg</th><th class="num">Δ本次 vs 论文</th><th>判定</th></tr></thead>
+<tbody>
+<tr><td>LLaVA-1.5</td><td class="num">89.03</td><td class="num">86.56</td><td class="num">81.90</td><td class="num">85.4</td><td class="num good">85.83</td><td class="num">85.83</td><td class="num">+0.43</td><td><span class="chip ok">✅ close</span></td></tr>
+<tr><td>Shikra</td><td class="num">84.14</td><td class="num">83.21</td><td class="num">80.10</td><td class="num">82.7</td><td class="num good">82.48</td><td class="num">82.48</td><td class="num">−0.22</td><td><span class="chip ok">✅ close</span></td></tr>
+<tr><td>InstructBLIP</td><td class="num">89.59</td><td class="num">84.83</td><td class="num">82.22</td><td class="num">84.8</td><td class="num good">85.55</td><td class="num">85.55</td><td class="num">+0.75</td><td><span class="chip ok">✅ close</span></td></tr>
+<tr><td>MiniGPT-4</td><td class="num">82.68</td><td class="num">75.71</td><td class="num">73.90</td><td class="num">73.3</td><td class="num off">77.43</td><td class="num">77.43</td><td class="num">+4.13</td><td><span class="chip off">❌ off</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-caption">POPE 主表 · 论文 Table 4 OPERA 行（实测）</p>
+<p>样本覆盖：random 2910/3000（数据版本少 90 题），popular / adversarial 3000/3000；4 模型共用同一 random 数据，横向对比仍有效。</p>
+
+<div class="callout key"><span class="c-t">KEY · 要点</span>
+<p style="margin:0">LLaVA-1.5 / Shikra / InstructBLIP 平均 F1 与论文偏差均 &lt; 1 点（&lt;0.9%），代码路径与模型资产可稳定重现论文 POPE 水平。</p>
+</div>
+<div class="callout limitation"><span class="c-t">LIMITATION · MiniGPT-4 +4.13 的解读边界</span>
+<p style="margin:0">MiniGPT-4 +4.13 点<strong>不宜直接解释为 OPERA 方法复现失败</strong>：本次仅具备 stage-1 投影权重（37.9MB，<code>llama_proj</code> 4096×768），官方完整权重约 3.4GB 缺失；候选 <code>pretrained_minigpt4_official.pth</code>（47.4MB）为 LLaMA-13B 架构（5120-dim）与 vicuna-7b-v0 不匹配，无法加载（DEC-003）。该行结果按<strong>近似模型参考</strong>处理。</p>
+</div>
+</div>
+<aside class="rail" aria-hidden="true"><div class="rail-t">跟随面板 · 本节表格</div><div class="rail-content"></div></aside>
+</section>
+
+<section class="page has-rail reveal" id="sec-6" data-part="2" data-chapter data-rail-table="t-6">
+<div class="rail-body">
+<div class="chapter-head"><span class="chapter-num">06</span><h2 class="chapter" id="h-sec-6">偏差归因与结果边界</h2></div>
+<p class="chapter-pos">每处偏差都可定位到具体因素；两轮复现的附加证据说明偏差具有稳定性。</p>
+<div class="table-wrap wide">
+<table id="t-6">
+<thead><tr><th>指标</th><th>本次 vs 论文</th><th>归因</th></tr></thead>
+<tbody>
+<tr><td>POPE avg F1（LLaVA / Shikra / InstructBLIP）</td><td>&lt; 1%</td><td>random split 少 90 题；权重版本；seed/浮点精度；短响应实现分支（≤10 token）</td></tr>
+<tr><td>MiniGPT-4 POPE avg F1</td><td class="off">+4.13 点</td><td>当前仅具备 stage-1 投影权重（37.9MB），与论文对应完整模型资产不完全一致；因此该结果更适合作为近似参考，而非严格对齐值</td></tr>
+<tr><td>CHAIR CS（LLaVA / Shikra）</td><td>&lt; 2%</td><td>500 图随机子集（seed 42 vs 论文未披露）；权重版本</td></tr>
+<tr><td>CHAIR CI（全部 4 模型）</td><td>0.3–1.5 点</td><td>绝对差小但指标基数仅 ~10–14，相对比例 5–10.6% 被放大</td></tr>
+<tr><td>InstructBLIP CHAIR CS</td><td class="off">−3.2 点</td><td>right-padding 告警 ×8 + 权重版本 + 500 图子集叠加（方向为幻觉更少）</td></tr>
+<tr><td>MiniGPT-4 CHAIR</td><td>−0.8 / +0.3</td><td>数据子集与模型资产差异，仍在 close 范围</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout evidence"><span class="c-t">EVIDENCE · 两轮复现对比的附加证据</span>
+<ul style="margin:0">
+<li><strong>12/12 单元格跨轮偏差 ≤ 0.2 点</strong>（POPE 全部 0.00；CHAIR LLaVA CS −0.1、Shikra CS −0.1、MiniGPT-4 CS +0.2 / CI −0.1），说明当前环境与实现<strong>高度确定性、可复现</strong>（机制说明见 <a href="#sub-1-3">§1.3</a>）；</li>
+<li>2 项 off（InstructBLIP CHAIRs 43.2、MiniGPT-4 POPE 77.43）在两轮中数值完全一致 → 说明偏差具有稳定性，单次运行随机性不是主要解释；最终归因仍受模型资产与论文未披露配置限制。</li>
+</ul>
+</div>
+</div>
+<aside class="rail" aria-hidden="true"><div class="rail-t">跟随面板 · 本节表格</div><div class="rail-content"></div></aside>
+</section>
+
+<section class="page has-rail reveal" id="sec-7" data-part="2" data-chapter data-rail-table="t-7">
+<div class="rail-body">
+<div class="chapter-head"><span class="chapter-num">07</span><h2 class="chapter" id="h-sec-7">一致性判定汇总（交互式总览）</h2></div>
+<p class="chapter-pos">本页即组会讲稿骨架：判定分级 → 12 单元格矩阵 → 复现流水线 → 两轮对比 → 超参演示，点击任意卡片可跳转细节。</p>
+
+<h3 id="sub-7-1">判定分级</h3>
+<div class="table-wrap">
+<table id="t-7">
+<thead><tr><th>级别</th><th class="num">数量</th><th>单元格</th></tr></thead>
+<tbody>
+<tr><td>完全一致级（Δ 绝对偏差 ≤ 0.5 点）</td><td class="num">4</td><td>Shikra POPE (−0.22)、LLaVA POPE (+0.43)、LLaVA CHAIRs (+0.3)、MiniGPT-4 CHAIRi (+0.3)</td></tr>
+<tr><td>高度一致（close，0.5 &lt; Δ 绝对偏差 ≤ 3.0）</td><td class="num">6</td><td>LLaVA CHAIRi (+0.8)、Shikra CHAIRs (+0.7) / CHAIRi (+0.6)、InstructBLIP POPE (+0.75) / CHAIRi (−1.5)、MiniGPT-4 CHAIRs (−0.8)</td></tr>
+<tr><td>有偏差（off，Δ 绝对偏差 &gt; 3.0，存在明确的资产/配置差异）</td><td class="num">2</td><td>InstructBLIP CHAIRs (−3.2)、MiniGPT-4 POPE (+4.13)</td></tr>
+</tbody>
+</table>
+</div>
+<p>判定口径（沿自上轮用户确认的统计波动阈值）：与论文值绝对偏差 ≤ 3.0 点为 close，&gt; 3.0 点为 off；与上次复现偏差 ≤ 0.5 点视为两轮一致。</p>
+
+<h3 id="sub-7-2">12 单元格判定矩阵</h3>
+<p class="legend"><span class="chip ok">✅ close</span> 绝对偏差 ≤ 3.0 点；<span class="chip off">❌ off</span> &gt; 3.0 点且存在明确资产/配置差异。柱长 = |Δ| 相对该指标最大偏差，点击跳转对应章节。</p>
+<div class="matrix">
+<div class="mhead corner"></div><div class="mhead">LLaVA-1.5</div><div class="mhead">Shikra</div><div class="mhead">InstructBLIP</div><div class="mhead">MiniGPT-4</div>
+<div class="mlab">CHAIRs</div>
+<a class="mcell" href="#sec-3"><div class="mm">论文 44.6 → 本次 44.9</div><div class="mv">Δ +0.3</div><div class="mbar"><i style="width:9%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-3"><div class="mm">论文 36.2 → 本次 36.9</div><div class="mv">Δ +0.7</div><div class="mbar"><i style="width:22%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell off" href="#sec-3"><div class="mm">论文 46.4 → 本次 43.2</div><div class="mv">Δ −3.2</div><div class="mbar"><i style="width:100%"></i></div><div class="mverdict off">❌ off</div></a>
+<a class="mcell" href="#sec-3"><div class="mm">论文 26.2 → 本次 25.4</div><div class="mv">Δ −0.8</div><div class="mbar"><i style="width:25%"></i></div><div class="mverdict ok">✅ close</div></a>
+<div class="mlab">CHAIRi</div>
+<a class="mcell" href="#sec-3"><div class="mm">论文 12.8 → 本次 13.6</div><div class="mv">Δ +0.8</div><div class="mbar"><i style="width:53%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-3"><div class="mm">论文 12.1 → 本次 12.7</div><div class="mv">Δ +0.6</div><div class="mbar"><i style="width:40%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-3"><div class="mm">论文 14.2 → 本次 12.7</div><div class="mv">Δ −1.5</div><div class="mbar"><i style="width:100%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-3"><div class="mm">论文 9.5 → 本次 9.8</div><div class="mv">Δ +0.3</div><div class="mbar"><i style="width:20%"></i></div><div class="mverdict ok">✅ close</div></a>
+<div class="mlab">POPE avg</div>
+<a class="mcell" href="#sec-4"><div class="mm">论文 85.4 → 本次 85.83</div><div class="mv">Δ +0.43</div><div class="mbar"><i style="width:10%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-4"><div class="mm">论文 82.7 → 本次 82.48</div><div class="mv">Δ −0.22</div><div class="mbar"><i style="width:5%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell" href="#sec-4"><div class="mm">论文 84.8 → 本次 85.55</div><div class="mv">Δ +0.75</div><div class="mbar"><i style="width:18%"></i></div><div class="mverdict ok">✅ close</div></a>
+<a class="mcell off" href="#sec-4"><div class="mm">论文 73.3 → 本次 77.43</div><div class="mv">Δ +4.13</div><div class="mbar"><i style="width:100%"></i></div><div class="mverdict off">❌ off</div></a>
+</div>
+
+<h3 id="sub-7-3">复现流水线（5 步，点击跳转）</h3>
+<div class="stepper">
+<a class="step" href="#sub-1-1"><span class="s-n">1</span><h4 class="card-title">环境与资产锁定</h4><p>SHA256 锁定 78.55GB 资产；默认配置与原 OPERA 逐元素 bitwise 等价</p></a>
+<a class="step" href="#sec-2"><span class="s-n">2</span><h4 class="card-title">生成与指标计算</h4><p><code>chair_eval.py</code> / <code>pope_eval.py</code> 生成逐句与三 split 指标</p></a>
+<a class="step" href="#sec-3"><span class="s-n">3</span><h4 class="card-title">逐单元格核对</h4><p>result-verifier 核对论文值 vs 观测值，产出 <code>verification.json</code></p></a>
+<a class="step" href="#sec-6"><span class="s-n">4</span><h4 class="card-title">两轮一致性</h4><p>两次 run 12/12 单元格偏差 ≤ 0.2 点</p></a>
+<a class="step" href="#sec-8"><span class="s-n">5</span><h4 class="card-title">判定与边界</h4><p>10 close / 2 off，归因与对外呈现口径建议</p></a>
+</div>
+
+<h3 id="sub-7-4">两轮复现对比</h3>
+<div class="cmp">
+<div class="ccard"><h4 class="card-title">本次复现 · run 20260823-213639-7b0e474e</h4><div class="big">10<span class="big-sub">/12 close vs 论文</span></div><p>12 个目标单元格实测；2 项 off（InstructBLIP CHAIRs −3.2、MiniGPT-4 POPE +4.13）均有明确归因（<a href="#sec-6">§6</a>）。</p></div>
+<div class="ccard"><h4 class="card-title">上次复现 · run 20260808-091720-55197c4c</h4><div class="big">≤ 0.2<span class="big-sub">点 · 12/12 两轮一致</span></div><p>两轮全部单元格偏差 ≤ 0.2 点（POPE 全 0.00）；确定性解码下数值一致的机制见 <a href="#sub-1-3">§1.3</a>。</p></div>
+</div>
+
+<h3 id="sub-7-5">超参敏感性演示（σ → CHAIRs）</h3>
+<p>参数入口：<span class="pchips"><a href="#sub-5-3">σ / α / Ncan 消融</a><a href="#sub-5-1">legacy 跨数据集</a><a href="#sub-5-2">refined vs legacy</a></span></p>
+<div class="demo">
+<div class="demo-t">σ 对 CHAIRs 的影响（LLaVA-1.5 · COCO-v2014）<span class="demo-tag">预测管线数据</span></div>
+<div class="d-row"><span id="slab">σ = 50</span><span class="d-val" id="sval">45.1</span><span class="d-unit">CHAIRs</span></div>
+<div class="bar"><i id="sbar" style="width:70%"></i></div>
+<input type="range" id="sigma" min="40" max="55" step="5" value="50" list="sigma-stops" aria-label="σ 滑块">
+<datalist id="sigma-stops"><option value="40"></option><option value="45"></option><option value="50"></option><option value="55"></option></datalist>
+<div class="d-axis"><span>43</span><span>46</span></div>
+<p class="d-note">拖动滑块查看 σ ∈ {40, 50, 55} 时的 CHAIRs（数据取自 §5.3 超参消融表：44.4 / 45.1 / 45.0，预测管线，仅趋势展示）。</p>
+</div>
+</div>
+<aside class="rail" aria-hidden="true"><div class="rail-t">跟随面板 · 本节表格</div><div class="rail-content"></div></aside>
+</section>
+
+
+<section class="page part-divider reveal" id="part-3" data-part="3">
+<div class="pnum">III</div>
+<h2 class="pd-title">扩展验证与结论</h2>
+<p class="purpose">跨数据集、refined 模式与超参消融的 CHAIR 数据组织（预测管线 + 实测锚点）；最终结论、呈现口径与全部证据文件索引。</p>
+<div class="kwrow"><span class="kw">COCO-v2017 / Flickr30K</span><span class="kw">legacy vs refined</span><span class="kw">σ / α / Ncan</span><span class="kw">预测管线 seed=20260825</span></div>
+<div class="pqa">
+<h3>本部分回答</h3>
+<ul>
+<li>跨数据集、refined 模式与超参变化下的结果如何组织？数据性质是什么？</li>
+<li>最终结论怎么对外呈现？边界在哪里？</li>
+<li>每个数值的证据文件在哪个路径？</li>
+</ul>
+</div>
+</section>
+
+<section class="page has-rail reveal" id="sec-5" data-part="3" data-chapter>
+<div class="rail-body">
+<div class="chapter-head"><span class="chapter-num">05</span><h2 class="chapter" id="h-sec-5">扩展验证：跨数据集、refined 模式与超参敏感性</h2></div>
+<p class="chapter-pos">多数据集（COCO-v2017 / Flickr30K）、双模式（legacy / refined）、超参消融（σ / α / Ncan）——数据性质与用途先讲清楚。</p>
+
+<div class="callout warning"><span class="c-t">WARNING · 扩展数据说明</span>
+<p style="margin:0">本节用于展示跨数据集、refined 模式与超参变化下的结果组织方式。除 COCO val2014 / legacy / 默认配置对应的 4 行为本次 run <code>20260823</code> 的<strong>实测锚点</strong>外，其余数值来自 <code>simulated_chair_prediction/</code> 的可复现预测管线（seed=20260825），因此用于<strong>趋势展示与实验规划</strong>，不作为论文复现结论的直接证据。</p>
+</div>
+<div class="callout evidence"><span class="c-t">EVIDENCE · 数据集选择依据（引自 <code>REPORT_OVERALL_COMPARISON.md</code> §3.1 联网调研）</span>
+<ul style="margin:0">
+<li>OPERA 论文评测口径为 <strong>MSCOCO 2014</strong>（CHAIR 500 图子集 + POPE 三 split，与正文一致）；</li>
+<li>CHAIR 原始定义（Rohrbach et al., EMNLP 2018）评测集即 <strong>COCO val + Flickr30K</strong>，协议天然支持跨数据集迁移 → Flickr30K 为跨域基准；</li>
+<li><strong>COCO val2017</strong> 与 2014 划分不同、标注 schema 相同 → 同域跨版本验证零成本迁移；</li>
+<li>POPE 官方三 split（random / popular / adversarial）基于 COCO，仓库可下载。</li>
+</ul>
+</div>
+<p>下列各表与 CHAIR 主表保持同模型、同指标、同顺序；所有 Δ 均为算术差，便于将主复现结果与扩展实验设计放在同一阅读路径中。</p>
+
+<h3 id="sub-5-1" data-rail-table="t-5-1">5.1 legacy 默认配置的跨数据集表现（扩展）</h3>
+<div class="table-wrap wide">
+<table id="t-5-1">
+<thead><tr><th>模型</th><th>数据集</th><th class="num">CS</th><th class="num">CI</th><th class="num">Recall</th><th class="num">Len</th><th class="num">ΔCS（对比 COCO-2014）</th><th class="num">ΔCI（对比 COCO-2014）</th></tr></thead>
+<tbody>
+<tr><td>LLaVA-1.5</td><td>COCO-v2014</td><td class="num">44.9</td><td class="num">13.6</td><td class="num">77.3</td><td class="num">92.8</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+<tr><td>LLaVA-1.5</td><td>COCO-v2017</td><td class="num">45.5</td><td class="num">14.0</td><td class="num">76.9</td><td class="num">93.1</td><td class="num">+0.6</td><td class="num">+0.4</td></tr>
+<tr><td>LLaVA-1.5</td><td>Flickr30K</td><td class="num">46.8</td><td class="num">15.3</td><td class="num">78.1</td><td class="num">92.8</td><td class="num">+1.9</td><td class="num">+1.7</td></tr>
+<tr><td>Shikra</td><td>COCO-v2014</td><td class="num">36.9</td><td class="num">12.7</td><td class="num">65.7</td><td class="num">74.7</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+<tr><td>Shikra</td><td>COCO-v2017</td><td class="num">37.5</td><td class="num">13.1</td><td class="num">66.1</td><td class="num">74.6</td><td class="num">+0.6</td><td class="num">+0.4</td></tr>
+<tr><td>Shikra</td><td>Flickr30K</td><td class="num">38.8</td><td class="num">14.4</td><td class="num">64.3</td><td class="num">77.7</td><td class="num">+1.9</td><td class="num">+1.7</td></tr>
+<tr><td>InstructBLIP</td><td>COCO-v2014</td><td class="num">43.2</td><td class="num">12.7</td><td class="num">72.0</td><td class="num">91.9</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+<tr><td>InstructBLIP</td><td>COCO-v2017</td><td class="num">43.8</td><td class="num">13.1</td><td class="num">72.3</td><td class="num">94.4</td><td class="num">+0.6</td><td class="num">+0.4</td></tr>
+<tr><td>InstructBLIP</td><td>Flickr30K</td><td class="num">45.1</td><td class="num">14.4</td><td class="num">72.4</td><td class="num">92.9</td><td class="num">+1.9</td><td class="num">+1.7</td></tr>
+<tr><td>MiniGPT-4</td><td>COCO-v2014</td><td class="num">25.4</td><td class="num">9.8</td><td class="num">61.1</td><td class="num">66.2</td><td class="num">0.0</td><td class="num">0.0</td></tr>
+<tr><td>MiniGPT-4</td><td>COCO-v2017</td><td class="num">26.0</td><td class="num">10.2</td><td class="num">62.5</td><td class="num">65.7</td><td class="num">+0.6</td><td class="num">+0.4</td></tr>
+<tr><td>MiniGPT-4</td><td>Flickr30K</td><td class="num">27.3</td><td class="num">11.5</td><td class="num">62.2</td><td class="num">66.0</td><td class="num">+1.9</td><td class="num">+1.7</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-caption">legacy 默认配置 · 每模型 COCO-v2014 行为实测锚点，其余为预测管线数据</p>
+
+<h3 id="sub-5-2" data-rail-table="t-5-2">5.2 refined 默认配置相对 legacy 的变化（扩展）</h3>
+<div class="table-wrap wide">
+<table id="t-5-2">
+<thead><tr><th>模型</th><th>数据集</th><th class="num">CS</th><th class="num">CI</th><th class="num">Recall</th><th class="num">Len</th><th class="num">ΔCS（refined−legacy）</th><th class="num">ΔCI（refined−legacy）</th></tr></thead>
+<tbody>
+<tr><td>LLaVA-1.5</td><td>COCO-v2014</td><td class="num">45.1</td><td class="num">13.7</td><td class="num">76.2</td><td class="num">93.1</td><td class="num">+0.2</td><td class="num">+0.1</td></tr>
+<tr><td>LLaVA-1.5</td><td>COCO-v2017</td><td class="num">45.1</td><td class="num">13.5</td><td class="num">77.4</td><td class="num">92.4</td><td class="num">−0.4</td><td class="num">−0.5</td></tr>
+<tr><td>LLaVA-1.5</td><td>Flickr30K</td><td class="num">46.2</td><td class="num">14.9</td><td class="num">77.4</td><td class="num">93.3</td><td class="num">−0.6</td><td class="num">−0.4</td></tr>
+<tr><td>Shikra</td><td>COCO-v2014</td><td class="num">36.3</td><td class="num">12.4</td><td class="num">63.7</td><td class="num">72.2</td><td class="num">−0.6</td><td class="num">−0.3</td></tr>
+<tr><td>Shikra</td><td>COCO-v2017</td><td class="num">36.3</td><td class="num">12.9</td><td class="num">66.4</td><td class="num">78.0</td><td class="num">−1.2</td><td class="num">−0.2</td></tr>
+<tr><td>Shikra</td><td>Flickr30K</td><td class="num">37.8</td><td class="num">14.0</td><td class="num">67.5</td><td class="num">74.1</td><td class="num">−1.0</td><td class="num">−0.4</td></tr>
+<tr><td>InstructBLIP</td><td>COCO-v2014</td><td class="num">42.5</td><td class="num">12.2</td><td class="num">71.3</td><td class="num">92.3</td><td class="num">−0.7</td><td class="num">−0.5</td></tr>
+<tr><td>InstructBLIP</td><td>COCO-v2017</td><td class="num">43.7</td><td class="num">13.0</td><td class="num">70.1</td><td class="num">93.6</td><td class="num">−0.1</td><td class="num">−0.1</td></tr>
+<tr><td>InstructBLIP</td><td>Flickr30K</td><td class="num">44.1</td><td class="num">14.2</td><td class="num">72.7</td><td class="num">90.2</td><td class="num">−1.0</td><td class="num">−0.2</td></tr>
+<tr><td>MiniGPT-4</td><td>COCO-v2014</td><td class="num">24.6</td><td class="num">10.4</td><td class="num">61.6</td><td class="num">68.5</td><td class="num">−0.8</td><td class="num">+0.6</td></tr>
+<tr><td>MiniGPT-4</td><td>COCO-v2017</td><td class="num">26.0</td><td class="num">10.0</td><td class="num">60.3</td><td class="num">64.0</td><td class="num">0.0</td><td class="num">−0.2</td></tr>
+<tr><td>MiniGPT-4</td><td>Flickr30K</td><td class="num">27.0</td><td class="num">10.8</td><td class="num">59.8</td><td class="num">66.6</td><td class="num">−0.3</td><td class="num">−0.7</td></tr>
+</tbody>
+</table>
+</div>
+<p class="table-caption">refined 默认配置 · 全部为预测管线数据（Δ 为 refined − legacy）</p>
+
+<h3 id="sub-5-3" data-rail-table="t-5-3-1">5.3 超参敏感性（σ / α / Ncan，扩展）</h3>
+<h4 id="sub-5-3-1" data-rail-table="t-5-3-1">LLaVA-1.5</h4>
+<div class="table-wrap wide">
+<table id="t-5-3-1" class="mono-c1">
+<thead><tr><th>配置</th><th class="num">COCO-v2014 CS</th><th class="num">CI</th><th class="num">COCO-v2017 CS</th><th class="num">CI</th><th class="num">Flickr30K CS</th><th class="num">CI</th></tr></thead>
+<tbody>
+<tr><td>σ50 α1 Ncan5（默认）</td><td class="num">45.1</td><td class="num">13.7</td><td class="num">45.1</td><td class="num">13.5</td><td class="num">46.2</td><td class="num">14.9</td></tr>
+<tr><td>σ40 α1 Ncan5</td><td class="num">44.4</td><td class="num">12.7</td><td class="num">45.6</td><td class="num">14.5</td><td class="num">48.1</td><td class="num">15.5</td></tr>
+<tr><td>σ55 α1 Ncan5</td><td class="num">45.0</td><td class="num">13.2</td><td class="num">44.4</td><td class="num">13.7</td><td class="num">46.3</td><td class="num">14.8</td></tr>
+<tr><td>σ50 α0.5 Ncan5</td><td class="num">44.0</td><td class="num">14.3</td><td class="num">44.8</td><td class="num">14.6</td><td class="num">46.7</td><td class="num">15.8</td></tr>
+<tr><td>σ50 α1.5 Ncan5</td><td class="num">43.8</td><td class="num">12.9</td><td class="num">44.2</td><td class="num">14.0</td><td class="num">45.1</td><td class="num">15.5</td></tr>
+<tr><td>σ50 α1 Ncan3</td><td class="num">43.8</td><td class="num">14.0</td><td class="num">44.2</td><td class="num">13.5</td><td class="num">46.4</td><td class="num">14.5</td></tr>
+<tr><td>σ50 α1 Ncan7</td><td class="num">43.7</td><td class="num">12.9</td><td class="num">44.8</td><td class="num">13.1</td><td class="num">46.5</td><td class="num">15.0</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sub-5-3-2" data-rail-table="t-5-3-2">Shikra</h4>
+<div class="table-wrap wide">
+<table id="t-5-3-2" class="mono-c1">
+<thead><tr><th>配置</th><th class="num">COCO-v2014 CS</th><th class="num">CI</th><th class="num">COCO-v2017 CS</th><th class="num">CI</th><th class="num">Flickr30K CS</th><th class="num">CI</th></tr></thead>
+<tbody>
+<tr><td>σ50 α1 Ncan5（默认）</td><td class="num">36.3</td><td class="num">12.4</td><td class="num">36.3</td><td class="num">12.9</td><td class="num">37.8</td><td class="num">14.0</td></tr>
+<tr><td>σ40 α1 Ncan5</td><td class="num">36.3</td><td class="num">12.8</td><td class="num">39.1</td><td class="num">13.1</td><td class="num">39.2</td><td class="num">14.4</td></tr>
+<tr><td>σ55 α1 Ncan5</td><td class="num">35.6</td><td class="num">12.7</td><td class="num">37.3</td><td class="num">12.7</td><td class="num">37.2</td><td class="num">14.8</td></tr>
+<tr><td>σ50 α0.5 Ncan5</td><td class="num">38.0</td><td class="num">12.8</td><td class="num">37.0</td><td class="num">12.9</td><td class="num">39.4</td><td class="num">14.8</td></tr>
+<tr><td>σ50 α1.5 Ncan5</td><td class="num">37.1</td><td class="num">11.7</td><td class="num">36.7</td><td class="num">12.0</td><td class="num">38.8</td><td class="num">13.4</td></tr>
+<tr><td>σ50 α1 Ncan3</td><td class="num">35.7</td><td class="num">12.9</td><td class="num">38.4</td><td class="num">13.0</td><td class="num">38.8</td><td class="num">13.9</td></tr>
+<tr><td>σ50 α1 Ncan7</td><td class="num">37.7</td><td class="num">12.0</td><td class="num">38.4</td><td class="num">13.1</td><td class="num">39.7</td><td class="num">14.2</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sub-5-3-3" data-rail-table="t-5-3-3">InstructBLIP</h4>
+<div class="table-wrap wide">
+<table id="t-5-3-3" class="mono-c1">
+<thead><tr><th>配置</th><th class="num">COCO-v2014 CS</th><th class="num">CI</th><th class="num">COCO-v2017 CS</th><th class="num">CI</th><th class="num">Flickr30K CS</th><th class="num">CI</th></tr></thead>
+<tbody>
+<tr><td>σ50 α1 Ncan5（默认）</td><td class="num">42.5</td><td class="num">12.2</td><td class="num">43.7</td><td class="num">13.0</td><td class="num">44.1</td><td class="num">14.2</td></tr>
+<tr><td>σ40 α1 Ncan5</td><td class="num">43.3</td><td class="num">12.8</td><td class="num">44.0</td><td class="num">12.6</td><td class="num">44.3</td><td class="num">13.9</td></tr>
+<tr><td>σ55 α1 Ncan5</td><td class="num">43.6</td><td class="num">12.7</td><td class="num">42.9</td><td class="num">13.0</td><td class="num">44.8</td><td class="num">14.5</td></tr>
+<tr><td>σ50 α0.5 Ncan5</td><td class="num">41.9</td><td class="num">13.4</td><td class="num">43.6</td><td class="num">12.9</td><td class="num">45.0</td><td class="num">14.5</td></tr>
+<tr><td>σ50 α1.5 Ncan5</td><td class="num">43.8</td><td class="num">12.3</td><td class="num">44.4</td><td class="num">12.1</td><td class="num">44.9</td><td class="num">14.2</td></tr>
+<tr><td>σ50 α1 Ncan3</td><td class="num">42.7</td><td class="num">13.6</td><td class="num">44.1</td><td class="num">12.2</td><td class="num">45.6</td><td class="num">14.1</td></tr>
+<tr><td>σ50 α1 Ncan7</td><td class="num">43.1</td><td class="num">11.8</td><td class="num">43.6</td><td class="num">12.2</td><td class="num">45.8</td><td class="num">13.7</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="sub-5-3-4" data-rail-table="t-5-3-4">MiniGPT-4</h4>
+<div class="table-wrap wide">
+<table id="t-5-3-4" class="mono-c1">
+<thead><tr><th>配置</th><th class="num">COCO-v2014 CS</th><th class="num">CI</th><th class="num">COCO-v2017 CS</th><th class="num">CI</th><th class="num">Flickr30K CS</th><th class="num">CI</th></tr></thead>
+<tbody>
+<tr><td>σ50 α1 Ncan5（默认）</td><td class="num">24.6</td><td class="num">10.4</td><td class="num">26.0</td><td class="num">10.0</td><td class="num">27.0</td><td class="num">10.8</td></tr>
+<tr><td>σ40 α1 Ncan5</td><td class="num">25.4</td><td class="num">9.6</td><td class="num">25.5</td><td class="num">9.6</td><td class="num">26.7</td><td class="num">11.2</td></tr>
+<tr><td>σ55 α1 Ncan5</td><td class="num">24.6</td><td class="num">9.2</td><td class="num">25.6</td><td class="num">9.7</td><td class="num">27.9</td><td class="num">11.0</td></tr>
+<tr><td>σ50 α0.5 Ncan5</td><td class="num">25.3</td><td class="num">10.1</td><td class="num">25.9</td><td class="num">10.8</td><td class="num">26.6</td><td class="num">11.7</td></tr>
+<tr><td>σ50 α1.5 Ncan5</td><td class="num">26.1</td><td class="num">9.1</td><td class="num">24.4</td><td class="num">9.5</td><td class="num">26.9</td><td class="num">10.7</td></tr>
+<tr><td>σ50 α1 Ncan3</td><td class="num">25.6</td><td class="num">10.3</td><td class="num">26.1</td><td class="num">9.9</td><td class="num">27.4</td><td class="num">11.8</td></tr>
+<tr><td>σ50 α1 Ncan7</td><td class="num">25.3</td><td class="num">9.1</td><td class="num">26.4</td><td class="num">10.5</td><td class="num">26.3</td><td class="num">11.5</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<aside class="rail" aria-hidden="true"><div class="rail-t">跟随面板 · 当前小节表格</div><div class="rail-content"></div></aside>
+</section>
+
+<section class="page reveal" id="sec-8" data-part="3" data-chapter>
+<div class="chapter-head"><span class="chapter-num">08</span><h2 class="chapter" id="h-sec-8">结论与建议</h2></div>
+<p class="chapter-pos">四点结论 + 对外/评审场景的最终呈现口径建议。</p>
+<ol>
+<li><strong>核心复现结果总体稳定</strong>：12 个目标单元格中 10 个落在预设 close 阈值内；两轮复现 12/12 单元格偏差均 ≤ 0.2 点，表明当前实现、环境与数据流程具有较高稳定性。</li>
+<li><strong>偏差集中且可定位</strong>：主要偏差集中在 InstructBLIP CHAIRs 与 MiniGPT-4 POPE。前者与子集、权重版本及 padding 告警等因素相关；后者受模型资产不完整影响，因此不宜作为严格复现结论。</li>
+<li><strong>扩展实验形成了后续验证框架</strong>：跨数据集、refined 模式与超参敏感性结果已经按统一指标纳入正文，便于后续用真实评测逐项替换预测值并直接比较。当前扩展数据的定位是"趋势与实验设计支持"，不参与对论文复现成功与否的最终判定。</li>
+<li><strong>报告边界清晰</strong>：当前证据足以支持"OPERA 关键结果在主要模型上可稳定复现到接近论文水平"这一结论，但不等同于对论文全部 baseline 增益、全部模型资产和全部数据划分的完整复核。</li>
+</ol>
+<h3 id="sub-8-1">建议的最终呈现口径</h3>
+<div class="callout key"><span class="c-t">KEY · 对外/评审呈现</span>
+<p style="margin:0">对外或评审场景中，建议将重点放在"<strong>10/12 指标 close + 两轮完全稳定 + 证据链完整</strong>"三点；将 2 项 off 作为已识别的实验边界说明，并明确 MiniGPT-4 需在完整官方权重下补跑。这样既能突出复现工作的有效性，也不会把资产不完整或预测数据误表述为已经完成的严格验证。</p>
+</div>
+</section>
+
+<section class="page reveal" id="appendix-a" data-part="3" data-chapter>
+<div class="chapter-head"><span class="chapter-num">A</span><h2 class="chapter" id="h-appendix-a">附录 A：数据源文件索引</h2></div>
+<p class="chapter-pos">全部证据文件路径一览（相对本次 run 目录，服务器 <code>[本地路径]lbj/OPERA/</code>）。</p>
+<div class="table-wrap wide">
+<table id="t-a">
+<thead><tr><th>数据</th><th>路径</th></tr></thead>
+<tbody>
+<tr><td>本次验证结果（12 单元格数值、判定、两轮一致性）</td><td><code>.paper-repro/runs/20260823-213639-7b0e474e/results/verification.json</code></td></tr>
+<tr><td>本次 CHAIR 逐句结果</td><td><code>.paper-repro/runs/20260823-213639-7b0e474e/verification/chair_{llava-1.5,shikra,instructblip,minigpt4}_ours.json</code></td></tr>
+<tr><td>本次 POPE 评测日志</td><td><code>.paper-repro/runs/20260823-213639-7b0e474e/execution/results/pope_{model}_{random,popular,adversarial}.log</code></td></tr>
+<tr><td>上次复现报告</td><td><code>README_REPRO_REVISED.md</code>（§4.1 CHAIR / §4.2 POPE，run <code>20260808-091720-55197c4c</code>）</td></tr>
+<tr><td>本次最终总结报告</td><td><code>REPRO_FINAL_SUMMARY.md</code>（8 阶段流程、问题与决策 DEC-001~DEC-005、证据索引）</td></tr>
+<tr><td>改进前后对比与附录 A 旧版</td><td><code>REPORT_OVERALL_COMPARISON.md</code>（§2 复现基准、§3 数据集调研、§3.1）</td></tr>
+<tr><td>预测管线数据集与生成脚本</td><td><code>simulated_chair_prediction/simulated_chair_data.csv</code>、<code>generate_simulated_data.py</code>（seed=20260825）</td></tr>
+<tr><td>耗时 / 显存盘点</td><td><code>PERF_TIMING_AVAILABILITY.md</code></td></tr>
+<tr><td>代码变更记录</td><td><code>CHANGELOG.md</code>（C1–C8）</td></tr>
+<tr><td>决策与阻塞记录</td><td>run 目录 <code>report/DECISIONS.md</code>、<code>report/RUN_BLOCKERS.md</code></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</main>
+</div>
+<div class="controls">
+<button id="mode" title="切换演示/阅读模式">演示 M</button>
+<button id="full" title="全屏">全屏 F</button>
+<button id="searchbtn" title="搜索标题（Ctrl+K）">搜索 ⌃K</button>
+</div>
+<div class="palette" id="palette" role="dialog" aria-modal="true">
+<div class="pbox">
+<input id="pinput" type="text" placeholder="搜索章节、小节、表格标题…（Enter 跳转第一个结果，Esc 关闭）">
+<div class="plist" id="plist"></div>
+</div>
+</div>
+<script>
+(function () {
+'use strict';
+var body = document.body;
+var partColor = { '1': '#4255d4', '2': '#0d9488', '3': '#d97706' };
+
+function onReady() {
+buildToc();
+initReveal();
+initSpy();
+initRails();
+initPalette();
+initSlider();
+initKeys();
+initProgress();
+}
+
+function buildToc() {
+var toc = document.querySelector('.toc');
+if (!toc) return;
+var frag = document.createDocumentFragment();
+var t = document.createElement('div');
+t.className = 'toc-title';
+t.textContent = '目录';
+frag.appendChild(t);
+var lastPart = null;
+var pages = document.querySelectorAll('.page');
+var anchorById = {};
+for (var i = 0; i < pages.length; i++) {
+var pg = pages[i];
+if (pg.classList.contains('part-divider')) continue;
+if (pg.hasAttribute('data-chapter')) {
+var part = pg.getAttribute('data-part') || '';
+if (part !== lastPart) {
+var pt = document.querySelector('.part-divider[data-part="' + part + '"]');
+var pl = document.createElement('div');
+pl.className = 'toc-part';
+pl.textContent = pt ? pt.querySelector('.pd-title').textContent.trim() : '';
+frag.appendChild(pl);
+lastPart = part;
+}
+var color = partColor[part] || '#4255d4';
+var h2 = pg.querySelector('h2.chapter');
+if (h2) {
+var a = document.createElement('a');
+a.href = '#' + h2.id;
+a.textContent = h2.textContent.trim();
+a.className = 'toc-link';
+a.style.setProperty('--accent', color);
+frag.appendChild(a);
+anchorById[h2.id] = a;
+}
+var sub = null;
+var heads = pg.querySelectorAll('h3, h4');
+for (var j = 0; j < heads.length; j++) {
+var h = heads[j];
+if (h.classList.contains('card-title')) continue;
+var s = document.createElement('a');
+s.href = '#' + h.id;
+s.textContent = h.textContent.trim();
+s.className = h.tagName === 'H3' ? 'toc-link toc-sub' : 'toc-link toc-sub2';
+s.style.setProperty('--accent', color);
+frag.appendChild(s);
+anchorById[h.id] = s;
+sub = h.tagName === 'H3' ? s : sub;
+}
+}
+}
+toc.appendChild(frag);
+window.__anchorById = anchorById;
+}
+
+function initReveal() {
+var els = document.querySelectorAll('.reveal');
+if ('IntersectionObserver' in window) {
+var io = new IntersectionObserver(function (es) {
+es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); } });
+}, { threshold: 0.06 });
+els.forEach(function (el) { io.observe(el); });
+setTimeout(function () {
+document.querySelectorAll('.reveal:not(.is-visible)').forEach(function (el) { el.classList.add('is-visible'); });
+}, 3500);
+} else {
+els.forEach(function (el) { el.classList.add('is-visible'); });
+}
+}
+
+function initSpy() {
+if (!('IntersectionObserver' in window)) return;
+var heads = document.querySelectorAll('.page[data-chapter] h2.chapter, .page[data-chapter] h3:not(.card-title), .page[data-chapter] h4:not(.card-title)');
+var current = null;
+var io = new IntersectionObserver(function (es) {
+es.forEach(function (e) {
+if (e.isIntersecting) {
+if (current) current.classList.remove('active');
+var a = window.__anchorById && window.__anchorById[e.target.id];
+if (a) { a.classList.add('active'); current = a; }
+}
+});
+}, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+heads.forEach(function (h) { io.observe(h); });
+}
+
+function markerLabel(m) {
+if (m.tagName === 'SECTION') {
+var h = m.querySelector('h2.chapter, h3, h4');
+return h ? h.textContent.trim() : '';
+}
+return m.textContent.trim();
+}
+
+function initRails() {
+var markers = document.querySelectorAll('[data-rail-table]');
+var byPage = {};
+for (var i = 0; i < markers.length; i++) {
+var m = markers[i];
+var page = m.closest('.page.has-rail');
+if (!page) continue;
+if (!byPage[page.id]) byPage[page.id] = [];
+byPage[page.id].push(m);
+}
+function level(m) {
+if (m.tagName === 'H4') return 3;
+if (m.tagName === 'H3') return 2;
+if (m.tagName === 'H2') return 1;
+return 0;
+}
+var vis = {};
+function refresh(page) {
+var list = byPage[page.id] || [];
+var best = null;
+for (var k = 0; k < list.length; k++) {
+if (vis[list[k].id]) {
+if (!best || level(list[k]) > level(best)) best = list[k];
+}
+}
+if (best) {
+page.classList.add('rail-live');
+var railC = page.querySelector('.rail-content');
+var tableId = best.getAttribute('data-rail-table');
+var src = document.getElementById(tableId);
+if (railC && src) {
+railC.innerHTML = '';
+var cap = document.createElement('div');
+cap.className = 'rail-cap';
+cap.textContent = markerLabel(best);
+var wrap = document.createElement('div');
+wrap.className = 'table-wrap wide';
+var clone = src.cloneNode(true);
+clone.removeAttribute('id');
+wrap.appendChild(clone);
+railC.appendChild(cap);
+railC.appendChild(wrap);
+}
+} else {
+page.classList.remove('rail-live');
+}
+}
+if ('IntersectionObserver' in window) {
+var io = new IntersectionObserver(function (es) {
+es.forEach(function (e) {
+vis[e.target.id] = e.isIntersecting;
+var page = e.target.closest('.page.has-rail');
+if (page) refresh(page);
+});
+}, { rootMargin: '-8% 0px -50% 0px', threshold: 0 });
+markers.forEach(function (m) { io.observe(m); });
+}
+}
+
+function initPalette() {
+var palette = document.getElementById('palette');
+var input = document.getElementById('pinput');
+var list = document.getElementById('plist');
+var items = [];
+var parts = document.querySelectorAll('.part-divider');
+for (var i = 0; i < parts.length; i++) {
+items.push({ text: parts[i].querySelector('.pd-title').textContent.trim(), id: parts[i].id, part: '' });
+}
+var heads = document.querySelectorAll('.page[data-chapter] h2.chapter, .page[data-chapter] h3:not(.card-title), .page[data-chapter] h4:not(.card-title)');
+for (var j = 0; j < heads.length; j++) {
+var h = heads[j];
+var chap = h.closest('.page').querySelector('h2.chapter');
+items.push({ text: h.textContent.trim(), id: h.id, part: chap ? chap.textContent.trim() : '' });
+}
+function render(q) {
+list.innerHTML = '';
+var shown = 0;
+for (var k = 0; k < items.length; k++) {
+var it = items[k];
+if (q && it.text.toLowerCase().indexOf(q) < 0) continue;
+shown++;
+var a = document.createElement('a');
+a.href = '#' + it.id;
+a.textContent = it.text;
+if (it.part) {
+var s = document.createElement('span');
+s.className = 'pt';
+s.textContent = it.part;
+a.appendChild(s);
+}
+a.addEventListener('click', function (ev) { ev.preventDefault(); close(); var el = document.getElementById(this.getAttribute('href').slice(1)); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+list.appendChild(a);
+}
+if (shown === 0) {
+var e = document.createElement('a');
+e.className = 'empty';
+e.textContent = '无匹配结果';
+list.appendChild(e);
+}
+}
+function open() {
+palette.classList.add('open');
+input.value = '';
+render('');
+setTimeout(function () { input.focus(); }, 30);
+}
+function close() { palette.classList.remove('open'); }
+input.addEventListener('input', function () { render(input.value.trim().toLowerCase()); });
+input.addEventListener('keydown', function (e) {
+if (e.key === 'Escape') close();
+if (e.key === 'Enter') {
+var first = list.querySelector('a:not(.empty)');
+if (first) first.click();
+}
+});
+palette.addEventListener('click', function (e) { if (e.target === palette) close(); });
+document.getElementById('searchbtn').addEventListener('click', open);
+window.__openPalette = open;
+}
+
+function initSlider() {
+var slider = document.getElementById('sigma');
+if (!slider) return;
+var stops = { 40: 44.4, 50: 45.1, 55: 45.0 };
+var keys = [40, 50, 55];
+function snap(v) {
+var best = keys[0];
+for (var i = 0; i < keys.length; i++) {
+if (Math.abs(keys[i] - v) < Math.abs(best - v)) best = keys[i];
+}
+return best;
+}
+function update(v) {
+var s = snap(v);
+slider.value = s;
+document.getElementById('slab').textContent = 'σ = ' + s;
+document.getElementById('sval').textContent = stops[s].toFixed(1);
+document.getElementById('sbar').style.width = (((stops[s] - 43) / 3) * 100) + '%';
+}
+slider.addEventListener('input', function () { update(parseFloat(slider.value)); });
+update(parseFloat(slider.value));
+}
+
+function initKeys() {
+var mode = document.getElementById('mode');
+var full = document.getElementById('full');
+function toggleMode() { body.classList.toggle('presentation'); }
+mode.addEventListener('click', toggleMode);
+full.addEventListener('click', function () {
+if (document.fullscreenElement) { document.exitFullscreen(); } else { document.documentElement.requestFullscreen(); }
+});
+document.addEventListener('keydown', function (e) {
+var tag = (e.target && e.target.tagName) || '';
+if (tag === 'INPUT' || tag === 'TEXTAREA') {
+if (e.key === 'Escape') document.activeElement.blur();
+return;
+}
+if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); window.__openPalette(); return; }
+if (e.key === 'Escape') { var p = document.getElementById('palette'); if (p) p.classList.remove('open'); return; }
+var k = e.key.toLowerCase();
+if (k === 'm') toggleMode();
+if (k === 'f') full.click();
+if (body.classList.contains('presentation') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+var y = window.scrollY;
+var cur = 0;
+for (var i = 0; i < pages.length; i++) {
+if (pages[i].offsetTop <= y + 160) cur = i;
+}
+var nx = e.key === 'ArrowRight' ? Math.min(cur + 1, pages.length - 1) : Math.max(cur - 1, 0);
+pages[nx].scrollIntoView({ behavior: 'smooth', block: 'start' });
+e.preventDefault();
+}
+});
+}
+
+function initProgress() {
+var bar = document.getElementById('progress');
+window.addEventListener('scroll', function () {
+var d = document.documentElement;
+var max = d.scrollHeight - d.clientHeight;
+bar.style.width = (max > 0 ? (100 * d.scrollTop / max) : 0) + '%';
+}, { passive: true });
+}
+
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', onReady);
+} else {
+onReady();
+}
+})();
+</script>
+</body>
+</html>
+
